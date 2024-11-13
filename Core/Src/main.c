@@ -75,22 +75,28 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 		else if(capture_state == 1)
 		{
 			ICValue2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			if(ICValue2 > ICValue1)
-			{
-				FallingEdgeTime = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
-				capture_state++;
-				calculate_PWM();
-			} else
-			{
-				capture_state = 0;
-			}
+			FallingEdgeTime = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+			capture_state++;
+			calculate_PWM();
+
 		}
 	}
 }
 
 void calculate_PWM()
 {
-	uint32_t period = IC2_value - IC1_Value;
+	uint32_t period;
+	if(IC2_Value > IC1_Value)
+	{
+		period = IC2_value - IC1_Value;
+	} else if(IC2_Value = IC1_Value)
+	{
+		period = HSE_VALUE;
+	}
+	else
+	{
+		period = HSE_VALUE - (IC1_Value - IC2_value);
+	}
 	Duty = (FallingEdgeTime * 100)/(period); // duty in %
 	Frequency = HSE_VALUE/ICValue;
 }
