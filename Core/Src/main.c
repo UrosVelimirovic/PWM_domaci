@@ -56,24 +56,43 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t ICValue = 0;
-uint32_t Frequency = 0;
-float Duty = 0;
+uint8_t volatile capture_state = 0;
+uint32_t volatile ICValue1 = 0;
+uint32_t volatile ICValue2 = 0;
+uint32_t volatile FallingEdgeTime = 0;
+uint32_t volatile Frequency = 0;
+float volatile Duty = 0;
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-	if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) // rising edge on channel 1
+	if(capture_state < 2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) // rising edge on channel 1
 	{
-		// read timer
-		ICValue = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-
-		if (ICValue != 0)
+		if(capture_state == 0)
 		{
-			// duty
-			Duty = (HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) * 100)/ICValue;
-			Frequency = HSE_VALUE/ICValue;
+			ICValue1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			capture_state++;
+		}
+		else if(capture_state == 1)
+		{
+			ICValue2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			if(ICValue2 > ICValue1)
+			{
+				FallingEdgeTime = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+				capture_state++;
+				calculate_PWM();
+			} else
+			{
+				capture_state = 0;
+			}
 		}
 	}
+}
+
+void calculate_PWM()
+{
+	uint32_t period = IC2_value - IC1_Value;
+	Duty = (FallingEdgeTime * 100)/(period); // duty in %
+	Frequency = HSE_VALUE/ICValue;
 }
 /* USER CODE END 0 */
 
