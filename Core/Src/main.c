@@ -76,9 +76,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 		{
 			ICValue2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 			FallingEdgeTime = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
-			capture_state++;
 			calculate_PWM();
-
+			capture_state = 0;
 		}
 	}
 }
@@ -86,22 +85,34 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 void calculate_PWM()
 {
 	uint32_t period;
+	uint32_t activeTime;
+
 	if(IC2_Value > IC1_Value)
 	{
 		period = IC2_value - IC1_Value;
-	} else if(IC2_Value = IC1_Value)
-	{
-		period = HSE_VALUE;
 	}
 	else
 	{
 		period = HSE_VALUE - (IC1_Value - IC2_value);
 	}
+
+	if(FallingEdgeTime > IC1_Value)
+	{
+		activeTime = FallingEdgeTime - IC1_Value;
+	}
+	else
+	{
+		activeTime = HSE_VALUE - (IC1_Value - FallingEdgeTime);
+	}
 	Duty = (FallingEdgeTime * 100)/(period); // duty in %
 	Frequency = HSE_VALUE/ICValue;
-	if(Duty > 90){
-		 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+
+	activeTime /= (HSE_VALUE / 1000000); // to get microseconds.
+
+	if(activeTime >= 1800 && activeTime <= 2200){
+		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
 	}
+
 }
 /* USER CODE END 0 */
 
